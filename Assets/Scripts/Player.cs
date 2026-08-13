@@ -8,6 +8,9 @@ public class Player : MonoBehaviour
     [SerializeField] private Rigidbody rb;
     [SerializeField] private AreaTrigger floorDetectionTrigger;
     [SerializeField] private float deacceleration;
+    [SerializeField] private CapsuleCollider legsCollider;
+
+    [SerializeField] private float weight;
 
     private ForceMode jumpForceMode = ForceMode.Impulse;
     private ForceMode walkForceMode = ForceMode.Acceleration;
@@ -19,6 +22,8 @@ public class Player : MonoBehaviour
     private bool shouldJump = false;
 
     private const string groundTag = "Ground";
+
+    public float GetWeight { get { return weight; } }
 
     private void Awake()
     {
@@ -34,6 +39,22 @@ public class Player : MonoBehaviour
         {
             shouldJump = true;
         }
+
+        if (Input.GetKey(KeyCode.Tab))
+        {
+            weight += 10f;
+        }
+
+        if (isGrounded)
+        {
+            legsCollider.material.dynamicFriction = 1f;
+        }
+        else
+        {
+            legsCollider.material.dynamicFriction = 0f;
+        }
+
+        Debug.Log("peso del player" + weight);
     }
 
     private void FixedUpdate()
@@ -46,9 +67,10 @@ public class Player : MonoBehaviour
 
         rb.AddForce(new Vector3(axisInput * acceleration, 0f, 0f), walkForceMode);
 
+        rb.linearVelocity = new Vector3(Mathf.Clamp(rb.linearVelocity.x, -terminalVelocity, terminalVelocity), rb.linearVelocity.y, rb.linearVelocity.z);
+
         if (Mathf.Abs(rb.linearVelocity.x) > terminalVelocity)
         {
-            //rb.linearVelocity = new Vector3(, rb.linearVelocity.y, rb.linearVelocity.z);
         }
     }
 
