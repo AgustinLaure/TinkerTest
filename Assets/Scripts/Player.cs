@@ -9,13 +9,20 @@ public class Player : MonoBehaviour
     [SerializeField] private AreaTrigger floorDetectionTrigger;
     [SerializeField] private float deacceleration;
     [SerializeField] private CapsuleCollider legsCollider;
+    [SerializeField] private GameObject aircraftContainer;
+
+    [SerializeField] private GameObject aircraftPreab;
+    [SerializeField] private GameObject shootingPoint;
 
     [SerializeField] private float weight;
 
     private ForceMode jumpForceMode = ForceMode.Impulse;
     private ForceMode walkForceMode = ForceMode.Acceleration;
 
+    private Quaternion lastRotation = Quaternion.identity;
+
     private float axisInput = 0f;
+    private float prevAxisInput = 0f;
 
     private bool isGrounded = false;
 
@@ -33,6 +40,7 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
+        prevAxisInput = axisInput;
         axisInput = Input.GetAxisRaw("Horizontal");
 
         if (Input.GetButtonDown("Jump") && isGrounded)
@@ -44,6 +52,28 @@ public class Player : MonoBehaviour
         {
             weight += 10f;
         }
+
+        if (Input.GetButtonDown("Shoot"))
+        {
+            GameObject auxAircraft = Instantiate(aircraftPreab, shootingPoint.transform.position, Quaternion.identity, aircraftContainer.transform);
+
+            Aircraft auxAircraftComp = auxAircraft.GetComponent<Aircraft>();
+
+            auxAircraftComp.direction = gameObject.transform.forward;
+        }
+
+        Debug.Log("axisInput: " + axisInput);
+        Debug.Log("prevAxisInput: " + prevAxisInput);
+
+        if (axisInput > 0f)
+        {
+            transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
+        }
+        if (axisInput < 0f)
+        {
+            transform.rotation = Quaternion.LookRotation(Vector3.left, Vector3.up);
+        }
+
 
         if (isGrounded)
         {

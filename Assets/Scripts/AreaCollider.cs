@@ -8,11 +8,11 @@ public class AreaCollider : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        OnColliderEntered.Invoke(collision);
+        OnColliderEntered?.Invoke(collision);
     }
 
     private void OnCollisionExit(Collision collision)
     {
-        OnColliderExited.Invoke(collision);
+        OnColliderExited?.Invoke(collision);
     }
 }
