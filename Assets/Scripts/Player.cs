@@ -3,6 +3,8 @@ using UnityEngine.Experimental.GlobalIllumination;
 
 public class Player : MonoBehaviour
 {
+    public static string playerTag = "Player";
+
     [SerializeField] private float acceleration;
     [SerializeField] private float terminalVelocity;
     [SerializeField] private float jumpImpulse;
