@@ -15,11 +15,23 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject box1StartPoint;
     [SerializeField] private GameObject box1EndPoint;
 
+    [SerializeField] private GameObject stage2cameraPos;
+    [SerializeField] private Camera camera;
+    [SerializeField] private AreaTrigger stage2trigger;
+    [SerializeField] private GameObject stage2InvisibleWall;
+
     private float boxFallTime = 3f;
+    private float cameraMoveTime = 1.7f;
 
     private Coroutine box1FallCoroutine = null;
 
     private Coroutine box2FallCoroutine = null;
+
+    private Coroutine cameraStage2Corutine = null;
+
+    private const string playerTag = "Player";
+
+    private bool cameraStage2Moved = false;
 
     private void Start()
     {
@@ -27,37 +39,33 @@ public class GameManager : MonoBehaviour
 
         button1.OnPlayerPressed += HandleButton1Press;
         rope1Collider.OnColliderEntered += HandleRope1Enter;
+
+        stage2trigger.OnTriggerEntered += HandleStage2;
     }
 
     private void HandleButton1Press()
     {
         if (box1FallCoroutine == null)
         {
-            box1FallCoroutine = StartCoroutine(ObjectFallCoroutine(box1, box1EndPoint, boxFallTime));
+            box1FallCoroutine = StartCoroutine(MoveObjectTowards(box1, box1EndPoint, boxFallTime));
         }
     }
 
-    //private IEnumerator Box1FallAnim()
-    //{
-    //    float t = 0f;
-    //
-    //    Vector3 startingPos = box1StartPoint.transform.position;
-    //
-    //    while (t < 1f)
-    //    {
-    //        t += Time.deltaTime / boxFallTime;
-    //
-    //        Vector3 newPos = box1.transform.position;
-    //
-    //        newPos = Vector3.Lerp(startingPos, box1EndPoint.transform.position, t);
-    //
-    //        box1.transform.position = new Vector3(box1.transform.position.x, newPos.y, box1.transform.position.z);
-    //
-    //        yield return null;
-    //    }
-    //}
+    private void HandleStage2(Collider collider)
+    {
+        if (collider.transform.CompareTag(playerTag) && !cameraStage2Moved)
+        {
+            if (cameraStage2Corutine == null)
+            {
+                cameraStage2Corutine = StartCoroutine(MoveObjectTowards(camera.gameObject, stage2cameraPos, cameraMoveTime));
 
-    private IEnumerator ObjectFallCoroutine(GameObject fallingObject, GameObject endPoint, float fallTime)
+                stage2InvisibleWall.SetActive(true);
+                cameraStage2Moved = true;
+            }
+        }
+    }
+
+    private IEnumerator MoveObjectTowards(GameObject fallingObject, GameObject endPoint, float fallTime)
     {
         float t = 0f;
 
@@ -71,7 +79,7 @@ public class GameManager : MonoBehaviour
 
             newPos = Vector3.Lerp(startingPos, endPoint.transform.position, t);
 
-            fallingObject.transform.position = new Vector3(fallingObject.transform.position.x, newPos.y, fallingObject.transform.position.z);
+            fallingObject.transform.position = new Vector3(newPos.x, newPos.y, newPos.z);
 
             yield return null;
         }
@@ -83,7 +91,7 @@ public class GameManager : MonoBehaviour
 
         if (box2FallCoroutine == null)
         {
-            box2FallCoroutine = StartCoroutine(ObjectFallCoroutine(box2, box2Endpoint, boxFallTime));
+            box2FallCoroutine = StartCoroutine(MoveObjectTowards(box2, box2Endpoint, boxFallTime));
         }
     }
 
@@ -91,5 +99,7 @@ public class GameManager : MonoBehaviour
     {
         button1.OnPlayerPressed -= HandleButton1Press;
         rope1Collider.OnColliderEntered -= HandleRope1Enter;
+
+        stage2trigger.OnTriggerEntered -= HandleStage2;
     }
 }

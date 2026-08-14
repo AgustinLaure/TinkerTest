@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Experimental.GlobalIllumination;
 
 public class Player : MonoBehaviour
 {
@@ -14,6 +15,8 @@ public class Player : MonoBehaviour
     [SerializeField] private GameObject aircraftPreab;
     [SerializeField] private GameObject shootingPoint;
 
+    [SerializeField] private GameObject crane;
+
     [SerializeField] private float weight;
 
     private ForceMode jumpForceMode = ForceMode.Impulse;
@@ -24,11 +27,18 @@ public class Player : MonoBehaviour
     private float axisInput = 0f;
     private float prevAxisInput = 0f;
 
+    private float slowFallSpeed = 0.06f;
+
+    private bool hasCrane = false;
+    private bool shouldSlowFall = false;
+
     private bool isGrounded = false;
 
     private bool shouldJump = false;
 
     private const string groundTag = "Ground";
+
+    private int unlockT = 0;
 
     public float GetWeight { get { return weight; } }
 
@@ -36,6 +46,8 @@ public class Player : MonoBehaviour
     {
         floorDetectionTrigger.OnTriggerEntered += HandleFloorDetectionTriggerEnter;
         floorDetectionTrigger.OnTriggerExited += HandleFloorDetectionTriggerExit;
+
+        crane.SetActive(false);
     }
 
     private void Update()
@@ -43,14 +55,40 @@ public class Player : MonoBehaviour
         prevAxisInput = axisInput;
         axisInput = Input.GetAxisRaw("Horizontal");
 
-        if (Input.GetButtonDown("Jump") && isGrounded)
+        bool isCraneActive = false;
+
+        if (Input.GetButtonDown("Jump"))
         {
-            shouldJump = true;
+            if (isGrounded)
+            {
+                shouldJump = true;
+            }
+        }
+        else if (Input.GetButton("Jump"))
+        {
+            if (hasCrane && !isGrounded && rb.linearVelocity.y < 0f)
+            {
+                shouldSlowFall = true;
+                isCraneActive = true;
+            }
         }
 
-        if (Input.GetKey(KeyCode.Tab))
+        crane.SetActive(isCraneActive);
+
+        if (Input.GetKeyDown(KeyCode.Tab))
         {
-            weight += 10f;
+            if (unlockT == 0)
+            {
+                weight += 10f;
+                Debug.Log("Ganaste peso");
+                unlockT++;
+            }
+            else if (unlockT == 1)
+            {
+                hasCrane = true;
+                Debug.Log("Desbloqueaste la grulla");
+                unlockT++;
+            }
         }
 
         if (Input.GetButtonDown("Shoot"))
@@ -92,13 +130,24 @@ public class Player : MonoBehaviour
             shouldJump = false;
         }
 
+        if (shouldSlowFall)
+        {
+            if (rb.linearVelocity.y < 0f)
+            {
+                rb.useGravity = false;
+                rb.AddForce(Physics.gravity * slowFallSpeed, ForceMode.Acceleration);
+            }
+
+            shouldSlowFall = false;
+        }
+        else
+        {
+            rb.useGravity = true;
+        }
+
         rb.AddForce(new Vector3(axisInput * acceleration, 0f, 0f), walkForceMode);
 
         rb.linearVelocity = new Vector3(Mathf.Clamp(rb.linearVelocity.x, -terminalVelocity, terminalVelocity), rb.linearVelocity.y, rb.linearVelocity.z);
-
-        if (Mathf.Abs(rb.linearVelocity.x) > terminalVelocity)
-        {
-        }
     }
 
 
