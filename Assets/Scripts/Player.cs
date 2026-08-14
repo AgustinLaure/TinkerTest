@@ -62,9 +62,6 @@ public class Player : MonoBehaviour
             auxAircraftComp.direction = gameObject.transform.forward;
         }
 
-        Debug.Log("axisInput: " + axisInput);
-        Debug.Log("prevAxisInput: " + prevAxisInput);
-
         if (axisInput > 0f)
         {
             transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);

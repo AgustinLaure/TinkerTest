@@ -8,6 +8,7 @@ public class AreaCollider : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
+        Debug.Log("entre");
         OnColliderEntered?.Invoke(collision);
     }
 

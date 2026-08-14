@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 6348210538604507639}
   - component: {fileID: 4571837812006503827}
   - component: {fileID: 4221827291225034323}
+  - component: {fileID: 148479751491255150}
   m_Layer: 0
   m_Name: Renderer
   m_TagString: Projectile
@@ -125,6 +126,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b1ba97f203f0da4495038b7324e7e60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AreaCollider
+--- !u!54 &148479751491255150
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4059622163723845713}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &4162898034212034006
 GameObject:
   m_ObjectHideFlags: 0
@@ -135,7 +163,6 @@ GameObject:
   m_Component:
   - component: {fileID: 9071653202365162673}
   - component: {fileID: 1346098504294826703}
-  - component: {fileID: 4730175287095864791}
   m_Layer: 0
   m_Name: Aircraft
   m_TagString: Untagged
@@ -174,30 +201,3 @@ MonoBehaviour:
   speed: 3
   areaCollider: {fileID: 4221827291225034323}
   direction: {x: 0, y: 0, z: 1}
---- !u!54 &4730175287095864791
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4162898034212034006}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
