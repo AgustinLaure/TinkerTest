@@ -1,8 +1,12 @@
+using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
 
 public class Player : MonoBehaviour
 {
+    public event Action OnOverlap;
+
     public static string playerTag = "Player";
 
     [SerializeField] private float acceleration;
@@ -14,6 +18,8 @@ public class Player : MonoBehaviour
     [SerializeField] private CapsuleCollider legsCollider;
     [SerializeField] private GameObject aircraftContainer;
 
+    [SerializeField] private AreaCollider bodyCollider;
+
     [SerializeField] private GameObject aircraftPreab;
     [SerializeField] private GameObject shootingPoint;
 
@@ -23,8 +29,6 @@ public class Player : MonoBehaviour
 
     private ForceMode jumpForceMode = ForceMode.Impulse;
     private ForceMode walkForceMode = ForceMode.Acceleration;
-
-    private Quaternion lastRotation = Quaternion.identity;
 
     private float axisInput = 0f;
     private float prevAxisInput = 0f;
@@ -42,12 +46,24 @@ public class Player : MonoBehaviour
 
     private int unlockT = 0;
 
+    private Coroutine overlapCheck = null;
+
+    private const float overlapTime = 4f;
+
+    private bool canMove = true;
+
+    public bool SetCanMove { set { canMove = value; } }
+
     public float GetWeight { get { return weight; } }
 
     private void Awake()
     {
         floorDetectionTrigger.OnTriggerEntered += HandleFloorDetectionTriggerEnter;
         floorDetectionTrigger.OnTriggerExited += HandleFloorDetectionTriggerExit;
+
+        bodyCollider.OnColliderEntered += HandleBodyColliderEnter;
+
+        bodyCollider.OnColliderExited += HandleBodyColliderExit;
 
         crane.SetActive(false);
     }
@@ -63,15 +79,21 @@ public class Player : MonoBehaviour
         {
             if (isGrounded)
             {
-                shouldJump = true;
+                if (canMove)
+                {
+                    shouldJump = true;
+                }
             }
         }
         else if (Input.GetButton("Jump"))
         {
             if (hasCrane && !isGrounded && rb.linearVelocity.y < 0f)
             {
-                shouldSlowFall = true;
-                isCraneActive = true;
+                if (canMove)
+                {
+                    shouldSlowFall = true;
+                    isCraneActive = true;
+                }
             }
         }
 
@@ -82,33 +104,39 @@ public class Player : MonoBehaviour
             if (unlockT == 0)
             {
                 weight += 10f;
-                Debug.Log("Ganaste peso");
+                //Debug.Log("Ganaste peso");
                 unlockT++;
             }
             else if (unlockT == 1)
             {
                 hasCrane = true;
-                Debug.Log("Desbloqueaste la grulla");
+                //Debug.Log("Desbloqueaste la grulla");
                 unlockT++;
             }
         }
 
-        if (Input.GetButtonDown("Shoot"))
+        if (canMove)
         {
-            GameObject auxAircraft = Instantiate(aircraftPreab, shootingPoint.transform.position, Quaternion.identity, aircraftContainer.transform);
+            if (Input.GetButtonDown("Shoot"))
+            {
+                GameObject auxAircraft = Instantiate(aircraftPreab, shootingPoint.transform.position, Quaternion.identity, aircraftContainer.transform);
 
-            Aircraft auxAircraftComp = auxAircraft.GetComponent<Aircraft>();
+                Aircraft auxAircraftComp = auxAircraft.GetComponent<Aircraft>();
 
-            auxAircraftComp.direction = gameObject.transform.forward;
+                auxAircraftComp.direction = gameObject.transform.forward;
+            }
         }
 
-        if (axisInput > 0f)
+        if (canMove)
         {
-            transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
-        }
-        if (axisInput < 0f)
-        {
-            transform.rotation = Quaternion.LookRotation(Vector3.left, Vector3.up);
+            if (axisInput > 0f)
+            {
+                transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
+            }
+            if (axisInput < 0f)
+            {
+                transform.rotation = Quaternion.LookRotation(Vector3.left, Vector3.up);
+            }
         }
 
 
@@ -121,7 +149,7 @@ public class Player : MonoBehaviour
             legsCollider.material.dynamicFriction = 0f;
         }
 
-        Debug.Log("peso del player" + weight);
+        //Debug.Log("peso del player" + weight);
     }
 
     private void FixedUpdate()
@@ -147,7 +175,10 @@ public class Player : MonoBehaviour
             rb.useGravity = true;
         }
 
-        rb.AddForce(new Vector3(axisInput * acceleration, 0f, 0f), walkForceMode);
+        if (canMove)
+        {
+            rb.AddForce(new Vector3(axisInput * acceleration, 0f, 0f), walkForceMode);
+        }
 
         rb.linearVelocity = new Vector3(Mathf.Clamp(rb.linearVelocity.x, -terminalVelocity, terminalVelocity), rb.linearVelocity.y, rb.linearVelocity.z);
     }
@@ -157,6 +188,32 @@ public class Player : MonoBehaviour
     {
         floorDetectionTrigger.OnTriggerEntered -= HandleFloorDetectionTriggerEnter;
         floorDetectionTrigger.OnTriggerExited -= HandleFloorDetectionTriggerExit;
+
+        bodyCollider.OnColliderEntered -= HandleBodyColliderEnter;
+    }
+
+    private void HandleBodyColliderEnter(Collision collision)
+    {
+        overlapCheck = StartCoroutine(OverlapCheckCoroutine());
+    }
+
+    private void HandleBodyColliderExit(Collision collision)
+    {
+        StopCoroutine(overlapCheck);
+    }
+
+    private IEnumerator OverlapCheckCoroutine()
+    {
+        float timer = 0f;
+
+        while (timer < overlapTime)
+        {
+            timer += Time.deltaTime;
+
+            yield return null;
+        }
+
+        OnOverlap?.Invoke();
     }
 
     private void HandleFloorDetectionTriggerEnter(Collider collider)

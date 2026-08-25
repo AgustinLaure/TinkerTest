@@ -19,6 +19,13 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Camera camera;
     [SerializeField] private AreaTrigger stage2trigger;
     [SerializeField] private GameObject stage2InvisibleWall;
+    [SerializeField] private GameObject player;
+
+    [SerializeField] private GameObject[] layers;
+    [SerializeField] private Collider[] colliders;
+
+    [SerializeField] private Collider playerFirstCollider;
+    [SerializeField] private Collider playerSecondCollider;
 
     private float boxFallTime = 3f;
     private float cameraMoveTime = 1.7f;
@@ -29,9 +36,17 @@ public class GameManager : MonoBehaviour
 
     private Coroutine cameraStage2Corutine = null;
 
+    private Coroutine snapBackCorutine = null;
+
     private const string playerTag = "Player";
 
     private bool cameraStage2Moved = false;
+
+    private int layer = 0;
+    private int lastLayer = 0;
+    private int maxLayer = 2;
+
+    private Player playerComponent;
 
     private void Start()
     {
@@ -41,6 +56,90 @@ public class GameManager : MonoBehaviour
         rope1Collider.OnColliderEntered += HandleRope1Enter;
 
         stage2trigger.OnTriggerEntered += HandleStage2;
+
+        playerComponent = player.GetComponent<Player>();
+
+        playerComponent.OnOverlap += HandlePlayerOverlap;
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            if (layer + 1 <= maxLayer)
+            {
+                ChangeLayer(1);
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            if (layer - 1 >= 0)
+            {
+                ChangeLayer(-1);
+            }
+        }
+
+        foreach (Collider collider in colliders)
+        {
+            bool areColliding1 = Physics.ComputePenetration(
+                playerFirstCollider, playerFirstCollider.bounds.center, playerFirstCollider.transform.rotation,
+                collider, collider.bounds.center, collider.transform.rotation,
+                out Vector3 direction, out float distance
+            );
+
+            bool areColliding2 = Physics.ComputePenetration(
+                playerSecondCollider, playerSecondCollider.bounds.center, playerSecondCollider.transform.rotation,
+                collider, collider.bounds.center, collider.transform.rotation,
+                out Vector3 direction2, out float distance2
+            );
+
+            if ((areColliding1 && distance >= 0.3f) || areColliding2 && distance2 >= 0.3f)
+            {
+                SetBack();
+            }
+        }
+    }
+
+    private void SetBack()
+    {
+        if (snapBackCorutine == null)
+        {
+            snapBackCorutine = StartCoroutine(SnapBackCoroutine());
+        }
+    }
+
+    private IEnumerator SnapBackCoroutine()
+    {
+        playerComponent.SetCanMove = false;
+
+        yield return new WaitForSeconds(0.5f);
+
+        ChangeLayer(lastLayer - layer);
+
+        playerComponent.SetCanMove = true;
+
+        snapBackCorutine = null;
+    }
+    private void ChangeLayer(int direction)
+    {
+        lastLayer = layer;
+        layer += direction;
+
+        layers[layer].SetActive(true);
+
+        for (int i = layer - 1; i >= 0; i--)
+        {
+            layers[i].SetActive(false);
+        }
+
+        camera.transform.position = new Vector3(camera.transform.position.x, camera.transform.position.y, camera.transform.position.z + 1f * direction);
+        player.transform.position = new Vector3(player.transform.position.x, player.transform.position.y, player.transform.position.z + 1f * direction);
+    }
+
+    private void HandlePlayerOverlap()
+    {
+        //  Debug.Log("asd");
     }
 
     private void HandleButton1Press()
@@ -101,5 +200,7 @@ public class GameManager : MonoBehaviour
         rope1Collider.OnColliderEntered -= HandleRope1Enter;
 
         stage2trigger.OnTriggerEntered -= HandleStage2;
+
+        playerComponent.OnOverlap -= HandlePlayerOverlap;
     }
 }

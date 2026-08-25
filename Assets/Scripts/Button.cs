@@ -22,11 +22,11 @@ public class Button : MonoBehaviour
     {
         if (isPlayerOnTop)
         {
-            Debug.Log("player arriba");
+           // Debug.Log("player arriba");
         }
         else
         {
-            Debug.Log("player abajo");
+            //Debug.Log("player abajo");
         }
     }
 
