@@ -64,6 +64,8 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
+        if (snapBackCorutine != null) return;
+
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
             if (layer + 1 <= maxLayer)
@@ -82,6 +84,11 @@ public class GameManager : MonoBehaviour
 
         foreach (Collider collider in colliders)
         {
+            if (collider == null || !collider.gameObject.activeInHierarchy) continue;
+
+            if (Mathf.Abs(collider.transform.position.z - player.transform.position.z) > 0.5f)
+                continue;
+
             bool areColliding1 = Physics.ComputePenetration(
                 playerFirstCollider, playerFirstCollider.bounds.center, playerFirstCollider.transform.rotation,
                 collider, collider.bounds.center, collider.transform.rotation,
@@ -97,6 +104,7 @@ public class GameManager : MonoBehaviour
             if ((areColliding1 && distance >= 0.3f) || areColliding2 && distance2 >= 0.3f)
             {
                 SetBack();
+                break;
             }
         }
     }
@@ -121,6 +129,7 @@ public class GameManager : MonoBehaviour
 
         snapBackCorutine = null;
     }
+
     private void ChangeLayer(int direction)
     {
         lastLayer = layer;
@@ -128,10 +137,15 @@ public class GameManager : MonoBehaviour
 
         layers[layer].SetActive(true);
 
-        for (int i = layer - 1; i >= 0; i--)
+        if (lastLayer < layer)
         {
-            layers[i].SetActive(false);
+            layers[lastLayer].SetActive(false);
         }
+
+        //for (int i = layer - 1; i >= 0; i--)
+        //{
+        //    layers[i].SetActive(false);
+        //}
 
         camera.transform.position = new Vector3(camera.transform.position.x, camera.transform.position.y, camera.transform.position.z + 1f * direction);
         player.transform.position = new Vector3(player.transform.position.x, player.transform.position.y, player.transform.position.z + 1f * direction);
