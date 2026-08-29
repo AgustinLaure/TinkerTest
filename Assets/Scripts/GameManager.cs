@@ -134,6 +134,7 @@ public class GameManager : MonoBehaviour
     {
         lastLayer = layer;
         layer += direction;
+        playerComponent.CurrentPlaneDist = playerComponent.CurrentPlaneDist + direction;
 
         layers[layer].SetActive(true);
 

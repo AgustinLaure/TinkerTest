@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
+using UnityEngine.UIElements;
 
 public class Player : MonoBehaviour
 {
@@ -16,7 +17,10 @@ public class Player : MonoBehaviour
     [SerializeField] private AreaTrigger floorDetectionTrigger;
     [SerializeField] private float deacceleration;
     [SerializeField] private CapsuleCollider legsCollider;
+    [SerializeField] private CapsuleCollider torsoCollider;
     [SerializeField] private GameObject aircraftContainer;
+    [SerializeField] private float shootForce;
+
 
     [SerializeField] private AreaCollider bodyCollider;
 
@@ -24,6 +28,7 @@ public class Player : MonoBehaviour
     [SerializeField] private GameObject shootingPoint;
 
     [SerializeField] private GameObject crane;
+    [SerializeField] private GameObject trace;
 
     [SerializeField] private float weight;
 
@@ -50,11 +55,21 @@ public class Player : MonoBehaviour
 
     private const float overlapTime = 4f;
 
+    [SerializeField] private float shootingPointDistance;
+
     private bool canMove = true;
+
+    private float currentPlaneDist = 0;
+
+    private Vector3 shootDir = Vector3.zero;
+    private Vector3 mouseGlobalPos = Vector3.zero;
+    private bool isHoldingTrigger = false;
 
     public bool SetCanMove { set { canMove = value; } }
 
     public float GetWeight { get { return weight; } }
+
+    public float CurrentPlaneDist { set { currentPlaneDist = value; } get { return currentPlaneDist; } }
 
     private void Awake()
     {
@@ -66,6 +81,7 @@ public class Player : MonoBehaviour
         bodyCollider.OnColliderExited += HandleBodyColliderExit;
 
         crane.SetActive(false);
+        trace.SetActive(false);
     }
 
     private void Update()
@@ -117,13 +133,55 @@ public class Player : MonoBehaviour
 
         if (canMove)
         {
-            if (Input.GetButtonDown("Shoot"))
+            Vector3 closestPoint = torsoCollider.ClosestPoint(transform.position + shootDir * torsoCollider.bounds.extents.magnitude * 2f);
+
+            if (Input.GetButton("Shoot"))
             {
-                GameObject auxAircraft = Instantiate(aircraftPreab, shootingPoint.transform.position, Quaternion.identity, aircraftContainer.transform);
+                isHoldingTrigger = true;
+
+                Plane worldPlane = new Plane(new Vector3(0f, 0f, -1f), currentPlaneDist);
+
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+
+                if (worldPlane.Raycast(ray, out float distance))
+                {
+
+
+                    trace.SetActive(true);
+
+                    mouseGlobalPos = ray.GetPoint(distance);
+
+                    mouseGlobalPos.y = Mathf.Clamp(mouseGlobalPos.y, transform.position.y, float.MaxValue);
+
+                    if (Mathf.Abs(mouseGlobalPos.x - transform.position.x) + Mathf.Abs(mouseGlobalPos.y - transform.position.y) > 1f)
+                    {
+                        shootDir = (mouseGlobalPos - transform.position).normalized;
+
+                        closestPoint = torsoCollider.ClosestPoint(transform.position + shootDir * torsoCollider.bounds.extents.magnitude * 2f);
+
+                        trace.transform.position = closestPoint + shootDir * shootingPointDistance;
+
+                        Vector3 upDir = Vector3.Cross(shootDir, Vector3.forward);
+                        trace.transform.rotation = Quaternion.LookRotation(shootDir, upDir);
+                    }
+                }
+            }
+
+            if (Input.GetButtonUp("Shoot") && isHoldingTrigger)
+            {
+                GameObject auxAircraft = Instantiate(aircraftPreab, closestPoint + shootDir * shootingPointDistance, Quaternion.identity, aircraftContainer.transform);
 
                 Aircraft auxAircraftComp = auxAircraft.GetComponent<Aircraft>();
 
-                auxAircraftComp.direction = gameObject.transform.forward;
+                Vector3 upDir = Vector3.Cross(shootDir, Vector3.forward);
+                auxAircraft.transform.rotation = Quaternion.LookRotation(shootDir, upDir);
+
+                auxAircraftComp.direction = shootDir;
+
+                isHoldingTrigger = false;
+
+                trace.SetActive(false);
             }
         }
 
@@ -148,8 +206,6 @@ public class Player : MonoBehaviour
         {
             legsCollider.material.dynamicFriction = 0f;
         }
-
-        //Debug.Log("peso del player" + weight);
     }
 
     private void FixedUpdate()
@@ -183,13 +239,10 @@ public class Player : MonoBehaviour
         rb.linearVelocity = new Vector3(Mathf.Clamp(rb.linearVelocity.x, -terminalVelocity, terminalVelocity), rb.linearVelocity.y, rb.linearVelocity.z);
     }
 
-
-    private void OnDestroy()
+    private void OnDrawGizmos()
     {
-        floorDetectionTrigger.OnTriggerEntered -= HandleFloorDetectionTriggerEnter;
-        floorDetectionTrigger.OnTriggerExited -= HandleFloorDetectionTriggerExit;
-
-        bodyCollider.OnColliderEntered -= HandleBodyColliderEnter;
+        Gizmos.DrawLine(new Vector3(0f, 0f, currentPlaneDist), new Vector3(0f, 0f, currentPlaneDist - 1f));
+        Gizmos.DrawLine(transform.position, mouseGlobalPos);
     }
 
     private void HandleBodyColliderEnter(Collision collision)
@@ -230,5 +283,13 @@ public class Player : MonoBehaviour
         {
             isGrounded = false;
         }
+    }
+
+    private void OnDestroy()
+    {
+        floorDetectionTrigger.OnTriggerEntered -= HandleFloorDetectionTriggerEnter;
+        floorDetectionTrigger.OnTriggerExited -= HandleFloorDetectionTriggerExit;
+
+        bodyCollider.OnColliderEntered -= HandleBodyColliderEnter;
     }
 }
