@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.UIElements;
@@ -9,6 +10,10 @@ public class Player : MonoBehaviour
     public event Action OnOverlap;
 
     public static string playerTag = "Player";
+
+    [SerializeField] private GameManager gm;
+
+    [SerializeField] private GameObject rotator;
 
     [SerializeField] private float acceleration;
     [SerializeField] private float terminalVelocity;
@@ -21,16 +26,26 @@ public class Player : MonoBehaviour
     [SerializeField] private GameObject aircraftContainer;
     [SerializeField] private float shootForce;
 
-
     [SerializeField] private AreaCollider bodyCollider;
 
     [SerializeField] private GameObject aircraftPreab;
     [SerializeField] private GameObject shootingPoint;
 
+    [SerializeField] private CanvasGroup toggleControlsCG;
+    [SerializeField] private CanvasGroup controlsCG;
+
     [SerializeField] private GameObject crane;
     [SerializeField] private GameObject trace;
 
+    [SerializeField] private MovesUIHandler movesUIHandler;
+
+    [SerializeField] private Texture2D[] arrows;
+
+    [SerializeField] private GameObject aircraftIndicator;
+
     [SerializeField] private float weight;
+
+    private AircraftRecipe aicraftRecipe;
 
     private ForceMode jumpForceMode = ForceMode.Impulse;
     private ForceMode walkForceMode = ForceMode.Acceleration;
@@ -41,6 +56,7 @@ public class Player : MonoBehaviour
     private float slowFallSpeed = 0.06f;
 
     private bool hasCrane = false;
+    private bool hasAircraft = false;
     private bool shouldSlowFall = false;
 
     private bool isGrounded = false;
@@ -57,19 +73,29 @@ public class Player : MonoBehaviour
 
     [SerializeField] private float shootingPointDistance;
 
+    private bool isControlsShown = false;
     private bool canMove = true;
+    private bool isCrafting = false;
 
     private float currentPlaneDist = 0;
+    private bool isEmptyHanded = true;
 
     private Vector3 shootDir = Vector3.zero;
     private Vector3 mouseGlobalPos = Vector3.zero;
     private bool isHoldingTrigger = false;
+
+    private List<Origami.Moves> movesBuffer;
+
+    private Coroutine correctCraft = null;
 
     public bool SetCanMove { set { canMove = value; } }
 
     public float GetWeight { get { return weight; } }
 
     public float CurrentPlaneDist { set { currentPlaneDist = value; } get { return currentPlaneDist; } }
+
+    public bool GetIsCrafting { get { return isCrafting; } }
+
 
     private void Awake()
     {
@@ -82,6 +108,15 @@ public class Player : MonoBehaviour
 
         crane.SetActive(false);
         trace.SetActive(false);
+
+        movesBuffer = new List<Origami.Moves>();
+        aicraftRecipe = GetComponent<AircraftRecipe>();
+        aircraftIndicator.SetActive(false);
+    }
+
+    private void Start()
+    {
+
     }
 
     private void Update()
@@ -91,47 +126,116 @@ public class Player : MonoBehaviour
 
         bool isCraneActive = false;
 
-        if (Input.GetButtonDown("Jump"))
+        if (Input.GetButtonDown("Craft") && isEmptyHanded)
         {
-            if (isGrounded)
+            movesUIHandler.ClearSymbols();
+            movesBuffer.Clear();
+            isCrafting = !isCrafting;
+            Debug.Log("isCrafting = " + isCrafting);
+        }
+
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            isControlsShown = !isControlsShown;
+
+            //SetActive(toggleControlsCG, !isControlsShown);
+            SetActive(controlsCG, isControlsShown);
+        }
+
+        if (!isCrafting)
+        {
+            if (Input.GetButtonDown("Jump"))
             {
-                if (canMove)
+                if (isGrounded)
                 {
-                    shouldJump = true;
+                    if (canMove)
+                    {
+                        shouldJump = true;
+                    }
+                }
+            }
+            else if (Input.GetButton("Jump"))
+            {
+                if (hasCrane && !isGrounded && rb.linearVelocity.y < 0f)
+                {
+                    if (canMove)
+                    {
+                        shouldSlowFall = true;
+                        isCraneActive = true;
+                    }
+                }
+            }
+
+            crane.SetActive(isCraneActive);
+
+            //if (Input.GetKeyDown(KeyCode.Tab))
+            //{
+            //    if (unlockT == 0)
+            //    {
+            //        weight += 10f;
+            //        //Debug.Log("Ganaste peso");
+            //        unlockT++;
+            //    }
+            //    else if (unlockT == 1)
+            //    {
+            //        hasCrane = true;
+            //        //Debug.Log("Desbloqueaste la grulla");
+            //        unlockT++;
+            //    }
+            //}
+        }
+        else
+        {
+            if (Input.GetKeyDown(KeyCode.X))
+            {
+                movesBuffer.Clear();
+                movesUIHandler.ClearSymbols();
+            }
+            else if (movesBuffer.Count < movesUIHandler.GetMaxMoves && correctCraft == null)
+            {
+                bool hasMoved = false;
+
+                if (Input.GetKeyDown(KeyCode.UpArrow))
+                {
+                    movesBuffer.Add(Origami.Moves.Up);
+                    hasMoved = true;
+                }
+                else if (Input.GetKeyDown(KeyCode.DownArrow))
+                {
+                    movesBuffer.Add(Origami.Moves.Down);
+                    hasMoved = true;
+                }
+                else if (Input.GetKeyDown(KeyCode.LeftArrow))
+                {
+                    movesBuffer.Add(Origami.Moves.Left);
+                    hasMoved = true;
+                }
+                else if (Input.GetKeyDown(KeyCode.RightArrow))
+                {
+                    movesBuffer.Add(Origami.Moves.Right);
+                    hasMoved = true;
+                }
+
+                if (hasMoved)
+                {
+                    bool isValid = aicraftRecipe.isValid(movesBuffer);
+
+                    movesUIHandler.AddSymbol(movesBuffer[movesBuffer.Count - 1]);
+
+                    Debug.Log("is valid = " + isValid);
+
+                    if (isValid && aicraftRecipe.isDone(movesBuffer))
+                    {
+                        if (correctCraft == null)
+                        {
+                            StartCoroutine(CorrectCraftCoroutine());
+                        }
+                    }
                 }
             }
         }
-        else if (Input.GetButton("Jump"))
-        {
-            if (hasCrane && !isGrounded && rb.linearVelocity.y < 0f)
-            {
-                if (canMove)
-                {
-                    shouldSlowFall = true;
-                    isCraneActive = true;
-                }
-            }
-        }
 
-        crane.SetActive(isCraneActive);
-
-        if (Input.GetKeyDown(KeyCode.Tab))
-        {
-            if (unlockT == 0)
-            {
-                weight += 10f;
-                //Debug.Log("Ganaste peso");
-                unlockT++;
-            }
-            else if (unlockT == 1)
-            {
-                hasCrane = true;
-                //Debug.Log("Desbloqueaste la grulla");
-                unlockT++;
-            }
-        }
-
-        if (canMove)
+        if (canMove && hasAircraft)
         {
             Vector3 closestPoint = torsoCollider.ClosestPoint(transform.position + shootDir * torsoCollider.bounds.extents.magnitude * 2f);
 
@@ -143,11 +247,8 @@ public class Player : MonoBehaviour
 
                 Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-
                 if (worldPlane.Raycast(ray, out float distance))
                 {
-
-
                     trace.SetActive(true);
 
                     mouseGlobalPos = ray.GetPoint(distance);
@@ -170,7 +271,10 @@ public class Player : MonoBehaviour
 
             if (Input.GetButtonUp("Shoot") && isHoldingTrigger)
             {
-                GameObject auxAircraft = Instantiate(aircraftPreab, closestPoint + shootDir * shootingPointDistance, Quaternion.identity, aircraftContainer.transform);
+                hasAircraft = false;
+                isEmptyHanded = true;
+
+                GameObject auxAircraft = Instantiate(aircraftPreab, closestPoint + shootDir * shootingPointDistance, Quaternion.identity, gm.GetCurrentAircraftContainer.transform);
 
                 Aircraft auxAircraftComp = auxAircraft.GetComponent<Aircraft>();
 
@@ -182,6 +286,7 @@ public class Player : MonoBehaviour
                 isHoldingTrigger = false;
 
                 trace.SetActive(false);
+                aircraftIndicator.SetActive(false);
             }
         }
 
@@ -189,11 +294,11 @@ public class Player : MonoBehaviour
         {
             if (axisInput > 0f)
             {
-                transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
+                rotator.transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
             }
             if (axisInput < 0f)
             {
-                transform.rotation = Quaternion.LookRotation(Vector3.left, Vector3.up);
+                rotator.transform.rotation = Quaternion.LookRotation(Vector3.left, Vector3.up);
             }
         }
 
@@ -206,6 +311,29 @@ public class Player : MonoBehaviour
         {
             legsCollider.material.dynamicFriction = 0f;
         }
+    }
+
+    private void SetActive(CanvasGroup cb, bool isActive)
+    {
+        cb.alpha = isActive ? 1f : 0f;
+        cb.blocksRaycasts = isActive;
+        cb.interactable = isActive;
+    }
+    private IEnumerator CorrectCraftCoroutine()
+    {
+        yield return new WaitForSeconds(0.2f);
+
+        hasAircraft = true;
+        isEmptyHanded = false;
+        movesBuffer.Clear();
+        isCrafting = false;
+        movesUIHandler.ClearSymbols();
+
+        Debug.Log("Aicraft crafted");
+
+        aircraftIndicator.SetActive(true);
+
+        correctCraft = null;
     }
 
     private void FixedUpdate()

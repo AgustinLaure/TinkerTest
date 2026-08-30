@@ -27,6 +27,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Collider playerFirstCollider;
     [SerializeField] private Collider playerSecondCollider;
 
+    [SerializeField] private GameObject[] aircraftContainers;
+
     private float boxFallTime = 3f;
     private float cameraMoveTime = 1.7f;
 
@@ -48,6 +50,8 @@ public class GameManager : MonoBehaviour
 
     private Player playerComponent;
 
+    public GameObject GetCurrentAircraftContainer { get { return aircraftContainers[layer]; } }
+
     private void Start()
     {
         rope1Collider = rope1.GetComponentInChildren<AreaCollider>();
@@ -66,19 +70,22 @@ public class GameManager : MonoBehaviour
     {
         if (snapBackCorutine != null) return;
 
-        if (Input.GetKeyDown(KeyCode.UpArrow))
+        if (!playerComponent.GetIsCrafting)
         {
-            if (layer + 1 <= maxLayer)
+            if (Input.GetKeyDown(KeyCode.UpArrow))
             {
-                ChangeLayer(1);
+                if (layer + 1 <= maxLayer)
+                {
+                    ChangeLayer(1);
+                }
             }
-        }
 
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            if (layer - 1 >= 0)
+            if (Input.GetKeyDown(KeyCode.DownArrow))
             {
-                ChangeLayer(-1);
+                if (layer - 1 >= 0)
+                {
+                    ChangeLayer(-1);
+                }
             }
         }
 
